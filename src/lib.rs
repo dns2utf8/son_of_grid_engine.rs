@@ -64,11 +64,10 @@ impl SystemInfo {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum JobType {
+pub enum JobType {
     /// The default value
     Interactive,
     Batch,
-    /// TODO add Index of the job
     Array {
         id: usize,
         first: usize,
