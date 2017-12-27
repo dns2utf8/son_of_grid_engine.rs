@@ -6,8 +6,8 @@ rust:
   - nightly
 script:
   - |
-      cargo build
-      cargo test --release
+      cargo build &&
+      cargo test --release &&
       cargo doc --no-deps
 matrix:
   allow_failures:
