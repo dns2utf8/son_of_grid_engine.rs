@@ -1,0 +1,19 @@
+dist: trusty
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+script:
+  - |
+      cargo build
+      cargo test --release
+      cargo doc --no-deps
+matrix:
+  allow_failures:
+    - rust: nightly
+notifications:
+  irc:
+    on_success: never
+    on_failure: always
+    skip_join: true
