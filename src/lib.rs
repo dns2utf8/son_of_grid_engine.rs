@@ -37,22 +37,24 @@ pub struct SystemInfo {
     scratch_path: PathBuf,
     queue_name: String,
     job_type: JobType,
+    networking: NetworkInfo,
 }
 
 impl SystemInfo {
     pub fn discover() -> SystemInfo {
-        let job_type = parse_job_type();
-
         let cpus = var("SGE_BINDING")
             .unwrap_or("".into())
             .split_whitespace()
             .map(|s| s.parse().expect("must provide an array of numbers"))
             .collect();
 
+        let job_type = parse_job_type();
+
         SystemInfo {
             cpus,
             scratch_path: parse_scratch_path(var("MCR_CACHE_ROOT")),
             queue_name: var("QUEUE").unwrap_or("".into()),
+            networking: NetworkInfo::init(&job_type),
             job_type,
         }
     }
@@ -60,6 +62,8 @@ impl SystemInfo {
     pub fn is_multicore(&self) -> bool {
         self.cpus.len() > 1
     }
+
+    /// Fallback to detectable cpus
     pub fn available_cpus(&self) -> usize {
         let n = self.cpus.len();
         if n > 0 {
@@ -136,6 +140,30 @@ pub enum JobType {
     },
 }
 use JobType::*;
+
+
+pub enum NetworkInfo {
+    Localhost,
+    Master,
+    Client,
+}
+use NetworkInfo::*;
+
+impl NetworkInfo {
+    pub fn init(job_type: &JobType) {
+        match *job_type {
+            Interactive | Batch => Localhost,
+            Array { id, first, _} => {
+                if id == first {
+                    Master
+                } else {
+                    Client
+                }
+            }
+        }
+    }
+}
+
 
 fn parse_job_type() -> JobType {
     let mut job_type = match &*var("ENVIRONMENT").unwrap_or("".into()) {
