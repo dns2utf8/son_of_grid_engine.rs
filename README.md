@@ -1,5 +1,6 @@
 # Son of Grid Engine (SGE)
 
+[![Travis Build Status](https://travis-ci.org/dns2utf8/son_of_grid_engine.rs.svg?branch=master)](https://travis-ci.org/dns2utf8/son_of_grid_engine.rs)
 
 ## Example
 
