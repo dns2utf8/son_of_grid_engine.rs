@@ -21,9 +21,15 @@
 //! ```
 
 extern crate num_cpus;
+extern crate threadpool;
+//extern crate core_affinity;
+extern crate libc;
 
 use std::env::var;
 use std::path::PathBuf;
+use std::sync::{Arc, Barrier};
+use threadpool::{ThreadPool, Builder};
+use libc::{/*CPU_ISSET, */ CPU_SET, /*CPU_SETSIZE, */ cpu_set_t, /*sched_getaffinity, */ sched_setaffinity};
 
 #[derive(Debug)]
 pub struct SystemInfo {
@@ -61,6 +67,59 @@ impl SystemInfo {
         } else {
             num_cpus::get()
         }
+    }
+
+    /// Get a ThreadPool with the workers already pinned to the available cpus
+    ///
+    /// ```
+    /// extern crate son_of_grid_engine as sge;
+    ///
+    /// let info = sge::SystemInfo::discover();
+    /// let pool = info.get_pinned_threadpool();
+    ///
+    /// for i in 0..128 {
+    ///     pool.execute(move || {
+    ///         println!("{}", i);
+    ///     });
+    /// }
+    /// ```
+    pub fn get_pinned_threadpool(&self) -> ThreadPool {
+        let mut pool = Builder::new()
+                        .num_threads(self.available_cpus())
+                        .build();
+        self.pin_workers(&mut pool);
+        pool
+    }
+
+    pub fn pin_workers(&self, pool: &mut ThreadPool) {
+        let n = self.available_cpus();
+        let cpus = {
+            if self.cpus.len() != n {
+                (0..n).collect()
+            } else {
+                self.cpus.clone()
+            }
+        };
+        pool.join();
+
+        let barrier = Arc::new(Barrier::new(n));
+        for core_id in cpus {
+            let barrier = barrier.clone();
+            pool.execute(move || {
+                // wait until all workers are online
+                barrier.wait();
+
+                let mut set = new_cpu_set();
+                unsafe {
+                    // enable just one core
+                    CPU_SET(core_id, &mut set);
+                    sched_setaffinity(0, // Defaults to current thread
+                              std::mem::size_of::<cpu_set_t>(),
+                              &set);
+                }
+            });
+        }
+        pool.join();
     }
 }
 
@@ -118,6 +177,10 @@ fn err_to_string<E: std::fmt::Debug>(e: E) -> String {
 
 fn parse_scratch_path(a: Result<String, std::env::VarError>) -> PathBuf {
     a.map(|s| s.into()).unwrap_or(std::env::temp_dir())
+}
+
+fn new_cpu_set() -> cpu_set_t {
+    unsafe { std::mem::zeroed::<cpu_set_t>() }
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 [package]
 name = "son_of_grid_engine"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Stefan Schindler <dns2utf8@estada.ch>"]
 license = "MIT/Apache-2.0"
 readme = "README.md"
@@ -11,7 +11,14 @@ description = """
 Interface with son of grid engine (formerly sun grid engine) to run rust programs on clusters.
 """
 keywords = ["sge", "cluster", "sun", "threading", "parallelism"]
-categories = ["concurrency", "os"]
+categories = ["concurrency", "os", "science"]
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+    "README.md"
+]
 
 [dependencies]
-num_cpus = "1.7.0"
+num_cpus = "1.7"
+threadpool = "1.7"
+libc = "0.2"
