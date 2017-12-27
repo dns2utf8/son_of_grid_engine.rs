@@ -7,6 +7,7 @@
 //! let cluster = sge::SystemInfo::discover();
 //! let (tx, rx) = std::sync::mpsc::channel();
 //! for i in 0..cluster.available_cpus() {
+//!     let tx = tx.clone();
 //!     spawn(move || {
 //!         tx.send(i).expect("channel is still aroun");
 //!     });
@@ -14,7 +15,7 @@
 //! drop(tx);
 //!
 //! assert_eq!(
-//!     (0..cluster.available_cpus()).sum(),
+//!     (0..cluster.available_cpus()).sum::<usize>(),
 //!     rx.iter().sum()
 //! );
 //! ```
