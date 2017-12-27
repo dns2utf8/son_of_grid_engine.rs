@@ -22,7 +22,6 @@
 
 extern crate num_cpus;
 extern crate threadpool;
-//extern crate core_affinity;
 extern crate libc;
 
 use std::env::var;
@@ -106,6 +105,8 @@ impl SystemInfo {
         };
         pool.join();
 
+        pool.set_num_threads(n);
+
         let barrier = Arc::new(Barrier::new(n));
         for core_id in cpus {
             let barrier = barrier.clone();
@@ -142,6 +143,7 @@ pub enum JobType {
 use JobType::*;
 
 
+#[derive(Debug)]
 pub enum NetworkInfo {
     Localhost,
     Master,
@@ -150,7 +152,7 @@ pub enum NetworkInfo {
 use NetworkInfo::*;
 
 impl NetworkInfo {
-    pub fn init(job_type: &JobType) {
+    pub fn init(job_type: &JobType) -> NetworkInfo {
         match *job_type {
             Interactive | Batch => Localhost,
             Array { id, first, _} => {
