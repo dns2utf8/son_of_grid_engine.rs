@@ -22,3 +22,4 @@ include = [
 num_cpus = "1.7"
 threadpool = "1.7"
 libc = "0.2"
+rand = "0.3"

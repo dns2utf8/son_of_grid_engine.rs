@@ -23,10 +23,12 @@
 extern crate num_cpus;
 extern crate threadpool;
 extern crate libc;
+extern crate rand;
 
 use std::env::var;
 use std::path::PathBuf;
 use std::sync::{Arc, Barrier};
+use std::net::Ipv6Addr;
 use threadpool::{ThreadPool, Builder};
 use libc::{/*CPU_ISSET, */ CPU_SET, /*CPU_SETSIZE, */ cpu_set_t, /*sched_getaffinity, */ sched_setaffinity};
 
@@ -126,6 +128,13 @@ impl SystemInfo {
         }
         pool.join();
     }
+
+    pub fn get_master_ip(&self) -> Ipv6Addr {
+        match self.networking {
+            Localhost | Master => "::1".parse().expect("ipv6 localhost"),
+            Client => unimplemented!(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -155,7 +164,7 @@ impl NetworkInfo {
     pub fn init(job_type: &JobType) -> NetworkInfo {
         match *job_type {
             Interactive | Batch => Localhost,
-            Array { id, first, _} => {
+            Array { id, first, .. } => {
                 if id == first {
                     Master
                 } else {
@@ -206,12 +215,40 @@ fn err_to_string<E: std::fmt::Debug>(e: E) -> String {
 }
 
 fn parse_scratch_path(a: Result<String, std::env::VarError>) -> PathBuf {
-    a.map(|s| s.into()).unwrap_or(std::env::temp_dir())
+    a.map(|s| s.into()).unwrap_or_else(|_| {
+        let p = create_random_temp_dir();
+        println!("parse_scratch_path() fallback to {:?}", p);
+        p
+    })
 }
 
 fn new_cpu_set() -> cpu_set_t {
     unsafe { std::mem::zeroed::<cpu_set_t>() }
 }
 
+fn create_random_temp_dir() -> PathBuf {
+    let mut p = std::env::temp_dir();
+    p.push(format!("sge.fallback_{}", rand::random::<usize>()));
+    std::fs::create_dir_all(&p).expect("can not create temp_dir");
+    p
+}
+
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+
+    #[test]
+    fn array_connect_master() {
+        let info = SystemInfo {
+            cpus: vec![1, 2],
+            scratch_path: create_random_temp_dir(),
+            queue_name: "test".into(),
+            job_type: Array { id: 1, first: 1, last: 42, step_size: 2 },
+            networking: Master,
+        };
+
+        assert_eq!("::1".parse(), Ok(info.get_master_ip()));
+
+        std::fs::remove_dir_all(info.scratch_path).unwrap();
+    }
+}
