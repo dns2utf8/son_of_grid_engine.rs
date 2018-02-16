@@ -4,7 +4,7 @@
 //! extern crate son_of_grid_engine as sge;
 //! use std::thread::spawn;
 //!
-//! let cluster = sge::SystemInfo::discover();
+//! let cluster = sge::discover();
 //! let (tx, rx) = std::sync::mpsc::channel();
 //! for i in 0..cluster.available_cpus() {
 //!     let tx = tx.clone();
@@ -79,7 +79,7 @@ impl SystemInfo {
     /// ```
     /// extern crate son_of_grid_engine as sge;
     ///
-    /// let info = sge::SystemInfo::discover();
+    /// let info = sge::discover();
     /// let pool = info.get_pinned_threadpool();
     ///
     /// for i in 0..128 {
