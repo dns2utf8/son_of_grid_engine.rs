@@ -246,7 +246,7 @@ impl NetworkInfo {
 }
 
 fn gen_network_info_string(job_id: usize) -> String {
-    let full = std::env::args().nth(0).unwrap();
+    let full = std::env::args().nth(0).expect("unable to get binary name of self");
     let binary_name = full.split("/").last().unwrap();
     format!("{}.{}.sge_rs", binary_name, job_id)
 }
