@@ -30,14 +30,13 @@ use std::env::var;
 use std::path::PathBuf;
 use std::net::{IpAddr, SocketAddr, TcpListener, TcpStream};
 use std::process::Command;
-use std::io::{self};
+use std::io;
 use std::sync::{Arc, Barrier};
 use std::thread::sleep;
 use std::time::Duration;
 use threadpool::{Builder, ThreadPool};
 use libc::{/*CPU_SETSIZE, */ cpu_set_t, /*sched_getaffinity, */ sched_setaffinity,
            /*CPU_ISSET, */ CPU_SET};
-
 
 pub fn discover() -> SystemInfo {
     let cpus = var("SGE_BINDING")
@@ -155,33 +154,36 @@ impl SystemInfo {
             Client => {
                 let name = gen_network_info_string(self.job_id);
                 for _ in 0..23 {
-                    match file::get(&*name)
-                                .map(|b| String::from_utf8(b).unwrap()) {
+                    match file::get(&*name).map(|b| String::from_utf8(b).unwrap()) {
                         Ok(master) => {
-                            return master.split("|").nth(0).unwrap()
-                                        .split_whitespace()
-                                        .map(|s| s.parse().unwrap())
-                                        .collect()
-                        },
+                            return master
+                                .split("|")
+                                .nth(0)
+                                .unwrap()
+                                .split_whitespace()
+                                .map(|s| s.parse().unwrap())
+                                .collect()
+                        }
                         Err(_) => sleep(Duration::from_secs(2)),
                     }
                 }
                 panic!("unable to open master file: {:?}", name);
-            },
+            }
         }
     }
 
     pub fn listen_on_port(&self, port: u16) -> io::Result<TcpListener> {
-        TcpListener::bind(
-            SocketAddr::new("::".parse().expect("unable to parse ::")
-            , port))
+        TcpListener::bind(SocketAddr::new(
+            "::".parse().expect("unable to parse ::"),
+            port,
+        ))
     }
 
     pub fn connect_to_master(&self, port: u16) -> TcpStream {
         let a = self.get_master_ips()
-                    .iter()
-                    .map(|i| SocketAddr::new(*i, port))
-                    .collect::<Vec<SocketAddr>>();
+            .iter()
+            .map(|i| SocketAddr::new(*i, port))
+            .collect::<Vec<SocketAddr>>();
 
         let n_retries = 13;
         for _ in 0..n_retries {
@@ -207,7 +209,6 @@ pub enum JobType {
     },
 }
 use JobType::*;
-
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NetworkInfo {
@@ -245,9 +246,9 @@ impl NetworkInfo {
 }
 
 fn gen_network_info_string(job_id: usize) -> String {
-                    let full = std::env::args().nth(0).unwrap();
-                    let binary_name = full.split("/").last().unwrap();
-   format!("{}.{}.sge_rs", binary_name, job_id)
+    let full = std::env::args().nth(0).unwrap();
+    let binary_name = full.split("/").last().unwrap();
+    format!("{}.{}.sge_rs", binary_name, job_id)
 }
 
 fn parse_job_type() -> JobType {
@@ -326,13 +327,13 @@ fn get_local_ips() -> Vec<IpAddr> {
     let ip_a = exec("ip", &["a"])
         //.map(|ip4| ip4 + &*exec("ip", &["-6", "a"]).unwrap())
         .map(parse_ip);
-match ip_a {
-	Ok(v) => v,
-	Err(e) => {
-		println!("fallback to ifconfig {:?}", e);
-        	exec("ifconfig", &[]).map(parse_ifconfig).unwrap_or(vec![])
-	}
-}        
+    match ip_a {
+        Ok(v) => v,
+        Err(e) => {
+            println!("fallback to ifconfig {:?}", e);
+            exec("ifconfig", &[]).map(parse_ifconfig).unwrap_or(vec![])
+        }
+    }
 }
 
 fn parse_ip(s: String) -> Vec<IpAddr> {
@@ -371,8 +372,6 @@ fn exec(cmd: &str, args: &[&str]) -> std::io::Result<String> {
         .map(|o| String::from_utf8_lossy(&*o.stdout).into())
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -393,7 +392,10 @@ mod tests {
             networking: Master,
         };
 
-        assert_eq!(vec!["::1".parse::<IpAddr>().unwrap()], info.get_master_ips());
+        assert_eq!(
+            vec!["::1".parse::<IpAddr>().unwrap()],
+            info.get_master_ips()
+        );
 
         std::fs::remove_dir_all(info.scratch_path).unwrap();
     }
