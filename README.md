@@ -83,3 +83,11 @@ SystemInfo {
     }
 }
 ```
+
+# Testing
+
+## Test Array mode
+
+```bash
+RUST_BACKTRACE=1 ENVIRONMENT=BATCH SGE_TASK_ID=42 SGE_TASK_FIRST=42 SGE_TASK_LAST=46 SGE_TASK_STEPSIZE=1 cargo run --example print
+```
